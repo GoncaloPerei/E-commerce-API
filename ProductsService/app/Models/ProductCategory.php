@@ -15,6 +15,7 @@ class ProductCategory extends Model
     protected $fillable = [
         'name',
         'image',
+        'product_status_id',
     ];
 
     public function product(): HasMany

@@ -14,7 +14,7 @@ trait RequestsTrait
             throw new \Exception("You Are Not Authenticated");
         }
 
-        return $response;
+        return $response['user'];
     }
 
     public function getCart($cookie)
@@ -42,8 +42,28 @@ trait RequestsTrait
         return $response;
     }
 
-    public function processPayment()
+    public function getPayment($id, $cookie)
     {
-        
+        $response = Http::withCookies(['token' => $cookie], 'localhost')
+            ->get('http://localhost:8004/api/payments/' . $id)
+            ->json();
+
+        if (empty($response)) {
+            throw new \Exception("Empty request");
+        }
+
+        return $response['data'];
+    }
+
+    public function processPayment($order, $paymentMethod, $cookie)
+    {
+        $data = [
+            'order' => $order,
+            'paymentMethod' => $paymentMethod,
+        ];
+
+        $response = Http::withCookies(['token' => $cookie], 'localhost')->post('http://localhost:8004/api/payments', $data)->json();
+
+        return $response;
     }
 }

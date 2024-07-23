@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\OrderDetails;
 
 use Illuminate\Database\QueryException;
+
 use Illuminate\Http\Request;
 
 use Illuminate\Support\Facades\Log;
@@ -13,18 +15,17 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Resources\OrderResource;
 
 use App\Http\Requests\StoreOrderRequest;
+
 use App\Jobs\ProcessOrderJob;
+use App\Jobs\SendConfirmOrderJob;
+
 use App\Traits\RequestsTrait;
 use App\Traits\CookieTrait;
-use App\Traits\CRUDDetailsTrait;
-use App\Traits\DecodeHeaderTrait;
 
 class OrderController extends Controller
 {
     use RequestsTrait;
     use CookieTrait;
-    use CRUDDetailsTrait;
-    use DecodeHeaderTrait;
 
     /**
      * Display a listing of the resource.
@@ -34,21 +35,38 @@ class OrderController extends Controller
 
         //Decoding authenticated user
         try {
-            $user = $this->decodeHeader($request);
+            $user = $this->getUser($this->getCookie());
         } catch (\Exception $e) {
-            Log::error('An error ocurred when decoding header... ' . $e);
-            return response()->json(['message' => 'An error ocurred when decoding header', 'error' => $e->getMessage()], 500);
+            Log::error('An error ocurred when getting user... ' . $e);
+            return response()->json(['message' => 'An error ocurred when getting user', 'error' => $e->getMessage()], 500);
         }
 
         try {
             $data = Order::latest('id')
                 ->where('user_id', $user['id'])
-                ->with(['details']);
-
-            return OrderResource::collection($data->paginate((int) $request->paginate));
+                ->with('details')
+                ->paginate((int) $request->paginate);
         } catch (QueryException $e) {
             Log::error('Error when getting orders... ' . $e);
         }
+
+        foreach ($data as $item) {
+            try {
+                $response = $this->getPayment($item->id, $this->getCookie());
+
+                $item->payment = $response;
+            } catch (\Exception $e) {
+                Log::info('Error when getting payment... ' . $e->getMessage());
+                continue;
+            }
+        }
+
+        return OrderResource::collection($data);
+    }
+
+    public function testDetails(StoreOrderRequest $request)
+    {
+        return response()->json(['message' => 'Passed'], 200);
     }
 
     /**
@@ -60,10 +78,10 @@ class OrderController extends Controller
 
         //Decoding authenticated user
         try {
-            $user = $this->decodeHeader($request);
+            $user = $this->getUser($this->getCookie());
         } catch (\Exception $e) {
-            Log::error('An error ocurred when decoding header... ' . $e);
-            return response()->json(['message' => 'An error ocurred when decoding header', 'error' => $e->getMessage()], 500);
+            Log::error('An error ocurred when getting user... ' . $e);
+            return response()->json(['message' => 'An error ocurred when getting user', 'error' => $e->getMessage()], 500);
         }
 
         //Getting cart from cart micro
@@ -76,7 +94,7 @@ class OrderController extends Controller
 
         //Create details of order
         try {
-            $details = $this->storeDetails($request->all());
+            $details = OrderDetails::create($request->all());
             Log::info('Order details created successfully... ' . $details);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -90,6 +108,7 @@ class OrderController extends Controller
                 'cart' => json_encode($cart),
                 'user_id' => $user['id'],
                 'order_details_id' => $details['id'],
+                'aditional_comments' => $request->aditional_comments,
             ]);
         } catch (QueryException $e) {
             DB::rollBack();
@@ -97,7 +116,7 @@ class OrderController extends Controller
             return response()->json(['message' => 'Error creating order', 'error' => $e->getMessage()], 500);
         }
 
-        ProcessOrderJob::dispatch($order, $cart, $this->getCookie());
+        ProcessOrderJob::dispatch($order, $request->method, $cart, $user, $this->getCookie());
 
         DB::commit();
         Log::info('Order created successfully...');
@@ -107,14 +126,14 @@ class OrderController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Request $request, Order $order)
+    public function show(Order $order)
     {
         //Decoding authenticated user
         try {
-            $user = $this->decodeHeader($request);
+            $user = $this->getUser($this->getCookie());
         } catch (\Exception $e) {
-            Log::error('An error ocurred when decoding header... ' . $e);
-            return response()->json(['message' => 'An error ocurred when decoding header', 'error' => $e->getMessage()], 500);
+            Log::error('An error ocurred when getting user... ' . $e);
+            return response()->json(['message' => 'An error ocurred when getting user', 'error' => $e->getMessage()], 500);
         }
 
         //Check if selected order belongs to authenticated user
@@ -123,13 +142,22 @@ class OrderController extends Controller
         }
 
         try {
-            $data = Order::where('user_id', $order->id)
+            $data = Order::where('id', $order->id)
+                ->with('details')
                 ->firstOrFail();
-
-            return new OrderResource($data);
         } catch (QueryException $e) {
             return response()->json(['message' => 'An error ocurred when getting order', 'error' => $e->getMessage()]);
         }
+
+        try {
+            $response = $this->getPayment($data->id, $this->getCookie());
+
+            $data->payment = $response;
+        } catch (\Exception $e) {
+            Log::info('Error when getting payment... ' . $e->getMessage());
+        }
+
+        return new OrderResource($data);
     }
 
     /**

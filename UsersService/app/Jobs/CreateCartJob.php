@@ -21,7 +21,7 @@ class CreateCartJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(public User $user)
+    public function __construct(public User $user, public $cookie)
     {
         //
     }
@@ -31,7 +31,7 @@ class CreateCartJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $response = $this->postCart($this->user);
+        $response = $this->postCart($this->user, $this->cookie);
         Log::info('Response ' . $response);
     }
 }

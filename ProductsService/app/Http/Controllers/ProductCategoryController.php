@@ -30,8 +30,10 @@ class ProductCategoryController extends Controller
                 ])
                 ->allowedFilters([
                     'name',
+                    'product_status_id',
                     AllowedFilter::trashed(),
-                ]);
+                ])
+                ->latest('id');
 
             return ProductCategoryResource::collection($data->paginate((int) $request->paginate));
         } catch (QueryException $e) {

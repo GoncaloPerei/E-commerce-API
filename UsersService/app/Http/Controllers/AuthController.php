@@ -16,6 +16,7 @@ use App\Http\Requests\Auth\StoreLoginRequest;
 use App\Http\Requests\Auth\StoreRegisterRequest;
 use App\Http\Requests\Auth\UpdateProfileRequest;
 use App\Jobs\CreateCartJob;
+use App\Traits\CookieTrait;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -27,6 +28,8 @@ use Illuminate\Http\Request;
 class AuthController extends Controller
 {
     protected $user;
+
+    use CookieTrait;
 
     public function __construct()
     {
@@ -56,17 +59,7 @@ class AuthController extends Controller
 
             $user = User::where('id', $data['user']['id'])->firstOrFail();
 
-            // if ($request->input('money') && !$request->input('balance')) {
-            //     $updatedMoney = $user->money + $request->input('money');
-
-            //     $user->money = $updatedMoney;
-            // } else {
-            //     $user->money = $request->input('balance');
-            // }
-
-            $user->update($request->except('money'));
-
-            $user->save();
+            $user->update($request->all());
 
             DB::commit();
             return response()->json(['message' => 'Profile updated successfully'], 200);
@@ -118,7 +111,7 @@ class AuthController extends Controller
             return response()->json(['message' => 'Failed to register user', 'error' => $e->getMessage()], 500);
         }
 
-        CreateCartJob::dispatch($user);
+        CreateCartJob::dispatch($user, $this->getCookie());
 
         return response()->json(['message' => 'User registered successfully'], 201);
     }

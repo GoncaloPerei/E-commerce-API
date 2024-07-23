@@ -16,10 +16,9 @@ return new class extends Migration
             $table->string('full_name');
             $table->string('email')->unique();
             $table->string('password');
-            $table->double('money')->nullable()->default(0);
+            $table->double('balance')->nullable()->default(0);
             $table->timestamp('email_verified_at')->nullable();
             $table->foreignId('role_id')->nullable()->default(2)->constrained('roles')->onUpdate('cascade')->onDelete('cascade');
-            $table->rememberToken();
             $table->timestamps();
             $table->softDeletes();
         });

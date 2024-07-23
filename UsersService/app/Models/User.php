@@ -9,6 +9,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use App\Traits\JWTSubjectTrait;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class User extends Authenticatable implements JWTSubject
@@ -25,6 +26,7 @@ class User extends Authenticatable implements JWTSubject
         'email',
         'password',
         'role_id',
+        'balance',
     ];
 
     /**
@@ -50,8 +52,13 @@ class User extends Authenticatable implements JWTSubject
         ];
     }
 
-    public function role(): BelongsTo
+    public function roles(): BelongsTo
     {
-        return $this->belongsTo(Role::class);
+        return $this->belongsTo(Role::class, 'role_id', 'id');
+    }
+
+    public function cards(): HasMany
+    {
+        return $this->hasMany(Card::class, 'user_id', 'id');
     }
 }

@@ -3,39 +3,32 @@
 namespace App\Http\Controllers;
 
 use App\Models\Payment;
-use Illuminate\Http\Request;
+
 use Illuminate\Database\QueryException;
 
-use Illuminate\Support\Facades\Http;
+use Illuminate\Http\Request;
+
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 use App\Http\Resources\PaymentResource;
 
 use App\Jobs\ProcessPaymentJob;
+
 use App\Traits\CookieTrait;
-use App\Traits\DecodeAuthHeaderTrait;
-use Illuminate\Support\Facades\Log;
+use App\Traits\RequestsTrait;
 
 class PaymentController extends Controller
 {
-    use DecodeAuthHeaderTrait;
     use CookieTrait;
+    use RequestsTrait;
+
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
-        $user = $this->decodeHeader($request);
-
-        try {
-            $data = Payment::where('user_id', $user['id'])
-                ->latest('created_at')
-                ->paginate(6);
-
-            return PaymentResource::collection($data);
-        } catch (QueryException $e) {
-            return response()->json(['message' => 'Error']);
-        }
+        //
     }
 
     /**
@@ -43,49 +36,36 @@ class PaymentController extends Controller
      */
     public function store(Request $request)
     {
+        DB::beginTransaction();
+
+        //Decoding authenticated user
         try {
-            $user = $this->decodeHeader($request);
+            $user = $this->getUser($this->getCookie());
         } catch (\Exception $e) {
-            Log::error('An error ocurred when decoding header... ' . $e);
-            return response()->json(['message' => 'An error ocurred when decoding header', 'error' => $e->getMessage()], 500);
+            Log::error('An error ocurred when getting user... ' . $e);
+            return response()->json(['message' => 'An error ocurred when getting user', 'error' => $e->getMessage()], 500);
+        }
+
+        $paymentData = [
+            'order_id' => $request['order']['id'],
+        ];
+
+        if ($request['paymentMethod'] !== 0) {
+            $paymentData['payment_type_id'] = 2;
+            $paymentData['card_id'] = $request['paymentMethod'];
         }
 
         try {
-            $response = Http::withCookies(['token' => $this->getCookie()], 'localhost')->get('http://localhost:8002/api/cart')->json();
-        } catch (\Exception $e) {
-            Log::error('An error ocurred when sending a request... ' . $e);
-            return response()->json(['message' => 'An error ocurred when sending a request', 'error' => $e->getMessage()], 500);
-        }
-
-        if (empty($response)) {
-            Log::error('Cart was not found...');
-            return response()->json(['message' => 'Cart was not found']);
-        }
-
-        $cart = $response['data'];
-
-        if (empty($cart['cartItem'])) {
-            Log::error("Cart doesn't have any items...");
-            return response()->json(['message' => "Cart doesn't have any items"]);
-        }
-
-        try {
-            DB::beginTransaction();
-
-            $payment = Payment::create([
-                'cart' => json_encode($cart),
-                'user_id' => $user['id'],
-            ]);
-
-            DB::commit();
+            $payment = Payment::create($paymentData);
         } catch (QueryException $e) {
             DB::rollBack();
-            Log::error('Failed to create payment...');
+            Log::error('Failed to create payment...' . $e);
             return response()->json(['message' => 'Failed to create payment', 'error' => $e->getMessage()], 500);
         }
 
-        ProcessPaymentJob::dispatch($payment, $cart, $user, $this->getCookie());
+        ProcessPaymentJob::dispatch($payment->id, $this->getCookie());
 
+        DB::commit();
         Log::info('Payment created successfully...');
         return response()->json(['message' => 'Payment created successfully'], 201);
     }
@@ -93,9 +73,21 @@ class PaymentController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Payment $payment)
+    public function show($order)
     {
-        //
+        //Decoding authenticated user
+        try {
+            $user = $this->getUser($this->getCookie());
+        } catch (\Exception $e) {
+            Log::error('An error ocurred when getting user... ' . $e);
+            return response()->json(['message' => 'An error ocurred when getting user', 'error' => $e->getMessage()], 500);
+        }
+
+        $payment = Payment::where('order_id', $order)
+            ->with('status', 'type')
+            ->firstOrFail();
+
+        return new PaymentResource($payment);
     }
 
     /**

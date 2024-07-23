@@ -5,6 +5,9 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+use App\Http\Resources\PaymentStatusResource;
+use App\Http\Resources\PaymentTypeResource;
+
 class PaymentResource extends JsonResource
 {
     /**
@@ -16,9 +19,9 @@ class PaymentResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'user' => $this->user_id,
-            'cart' => json_decode($this->cart),
-            'status' => $this->status,
+            'status' => new PaymentStatusResource($this->status),
+            'type' => new PaymentTypeResource($this->type),
+            'notes' => $this->notes,
             'createdAt' => date('Y-m-d H:i:s', strtotime($this->created_at)),
             'updatedAt' => date('Y-m-d H:i:s', strtotime($this->updated_at)),
         ];

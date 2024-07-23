@@ -12,6 +12,8 @@ use App\Http\Middleware\VerifyUserMiddleware;
 Route::get('products', [ProductController::class, 'index']);
 Route::get('products/{product}', [ProductController::class, 'show']);
 
+Route::patch('products/{product}', [ProductController::class, 'update']);
+
 Route::prefix('administrator')
     ->middleware(Authentication::class, VerifyUserMiddleware::class)
     ->group(function () {

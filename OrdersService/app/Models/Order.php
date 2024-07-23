@@ -19,10 +19,11 @@ class Order extends Model
         'cart',
         'user_id',
         'order_details_id',
+        'aditional_comments',
     ];
 
     public function details(): BelongsTo
     {
-        return $this->belongsTo(OrderDetails::class);
+        return $this->belongsTo(OrderDetails::class, 'order_details_id', 'id');
     }
 }

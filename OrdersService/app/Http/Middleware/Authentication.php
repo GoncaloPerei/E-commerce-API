@@ -25,10 +25,8 @@ class Authentication
             return response()->json(['message' => 'Request unauthorized.', 'error' => $e->getMessage()], 403);
         }
 
-        try {
-            $request->headers->set('Auth-User', json_encode($response['user']));
-        } catch (\Exception $e) {
-            return response()->json(['message' => 'Error when setting header', 'error' => $e->getMessage()], 403);
+        if (empty($response)) {
+            return response()->json(['message' => 'Request unauthorized.', 'error' => 'User came empty']);
         }
 
         return $next($request);

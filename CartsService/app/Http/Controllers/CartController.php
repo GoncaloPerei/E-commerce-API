@@ -4,25 +4,27 @@ namespace App\Http\Controllers;
 
 use App\Models\Cart;
 use App\Models\CartItem;
-use App\Traits\DecodeAuthHeaderTrait;
 
 use Illuminate\Http\Request;
 
 use Illuminate\Database\QueryException;
 
-use App\Http\Resources\CartResource;
-
-use App\Http\Requests\StoreCartItemRequest;
-
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+
+use App\Http\Resources\CartResource;
+
+use App\Http\Requests\StoreCartItemRequest;
+use App\Traits\CookieTrait;
+use App\Traits\RequestsTrait;
 
 use Spatie\QueryBuilder\QueryBuilder;
 
 class CartController extends Controller
 {
-    use DecodeAuthHeaderTrait;
+    use RequestsTrait;
+    use CookieTrait;
 
     /**
      * Display a listing of the resource.
@@ -66,13 +68,18 @@ class CartController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Request $request)
+    public function show()
     {
-        $user = $this->decodeHeader($request);
+        try {
+            $user = $this->getUser($this->getCookie());
+        } catch (\Exception $e) {
+            Log::error('An error ocurred when decoding header... ' . $e);
+            return response()->json(['message' => 'An error ocurred when decoding header', 'error' => $e->getMessage()], 500);
+        }
 
         try {
             $data = QueryBuilder::for(Cart::class)
-                ->where('user_id', $user->id)
+                ->where('user_id', $user['id'])
                 ->withCount('cartItem')
                 ->first();
         } catch (QueryException $e) {
@@ -109,17 +116,20 @@ class CartController extends Controller
         $data = $this->show($request);
 
         try {
-            $response = Http::get('http://localhost:8001/api/products/' . $itemId);
+            $product = $this->getProduct($itemId);
         } catch (\Exception $e) {
-            Log::error('An error ocurred when sending a request... ' . $e->getMessage());
-            return response()->json(['message' => 'An error ocurred when sending a request']);
+            Log::error('An error ocurred when getting product... ' . $e->getMessage());
+            return response()->json(['message' => 'An error ocurred when getting product', 'error' => $e->getMessage()]);
         }
 
-        if (empty($response->json())) {
-            return response()->json(['message' => 'Product was not found']);
+        if ($product['stock'] === 0) {
+            Log::error('Product does not have stock...');
+            return response()->json(['message' => 'An error ocurred when getting product', 'error' => 'Product does not have any stock']);
         }
 
         try {
+            DB::beginTransaction();
+            
             CartItem::updateOrCreate(
                 ['product_id' => $itemId],
                 [
@@ -128,12 +138,15 @@ class CartController extends Controller
                     'quantity' => $request->quantity,
                 ]
             );
+
+            DB::commit();
         } catch (QueryException $e) {
-            Log::error('Failed to create cart item... ' . $e->getMessage());
-            return response()->json(['message' => 'Failed to create cart item']);
+            DB::rollBack();
+            Log::error('Failed to add product... ' . $e->getMessage());
+            return response()->json(['message' => 'Failed to add product', 'error' => $e->getMessage()]);
         }
 
-        return response()->json(['message' => 'Item added to cart successfully'], 201);
+        return response()->json(['message' => 'Product added to cart successfully'], 201);
     }
 
     /**

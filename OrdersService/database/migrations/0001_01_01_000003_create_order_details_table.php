@@ -17,7 +17,6 @@ return new class extends Migration
             $table->string('last_name');
             $table->string('address');
             $table->string('city');
-            $table->string('country');
             $table->string('postal_code');
             $table->string('nif')->nullable()->default(null);
             $table->timestamps();

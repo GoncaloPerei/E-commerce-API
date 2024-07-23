@@ -27,16 +27,14 @@ class UpdateUserRequest extends FormRequest
             return [
                 'fullName' => ['required', 'regex:/^[a-zA-Z ]+$/'],
                 'email' => ['required', 'email', 'unique:users', 'regex:/^[^\s@]+@[^\s@]+\.[^\s@]+$/'],
-                'password' => ['required', 'min:8', 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\$%\^&\*+\_-])(?=.{8,})/'],
-                'money',
+                'balance',
                 'role' => ['required'],
             ];
         } else {
             return [
                 'fullName' => ['sometimes', 'required', 'regex:/^[a-zA-Z ]+$/'],
                 'email' => ['sometimes', 'required', 'email', 'regex:/^[^\s@]+@[^\s@]+\.[^\s@]+$/'],
-                'password' => ['sometimes', 'required', 'min:8', 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\$%\^&\*+\_-])(?=.{8,})/'],
-                'money' => ['sometimes'],
+                'balance' => ['sometimes', 'numeric'],
                 'role' => ['sometimes', 'required'],
             ];
         }

@@ -20,8 +20,8 @@ class PaymentTypeSeeder extends Seeder
             DB::beginTransaction();
 
             PaymentType::factory()->create([
-                'name' => 'Checking Account',
-                'description' => "This payment method withdraws money in the e-commerce checking account"
+                'name' => 'E-commerce Balance',
+                'description' => "This payment method withdraws money in the e-commerce balance account"
             ]);
             PaymentType::factory()->create([
                 'name' => 'Debit or Credit Card',

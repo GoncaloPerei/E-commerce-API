@@ -21,6 +21,8 @@ class OrderResource extends JsonResource
             'userId' => $this->user_id,
             'cart' => json_decode($this->cart),
             'details' => new OrderDetailsResource($this->details),
+            'payment' => $this->payment,
+            'aditionalComments' => $this->aditional_comments,
             'createdAt' => date('Y-m-d H:i:s', strtotime($this->created_at)),
             'updatedAt' => date('Y-m-d H:i:s', strtotime($this->updated_at)),
         ];

@@ -14,9 +14,10 @@ return new class extends Migration
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('order_id');
-            $table->unsignedBigInteger('user_id');
             $table->foreignId('payment_type_id')->nullable()->default(1)->constrained('payment_types')->onUpdate('cascade')->onDelete('cascade');
+            $table->unsignedBigInteger('card_id')->nullable();
             $table->foreignId('payment_status_id')->nullable()->default(2)->constrained('payment_statuses')->onUpdate('cascade')->onDelete('cascade');
+            $table->string('notes')->nullable();
             $table->timestamps();
         });
     }

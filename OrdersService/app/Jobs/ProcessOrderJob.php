@@ -11,6 +11,8 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
+use App\Jobs\SendConfirmOrderJob;
+
 class ProcessOrderJob implements ShouldQueue
 {
     use RequestsTrait;
@@ -22,7 +24,9 @@ class ProcessOrderJob implements ShouldQueue
      */
     public function __construct(
         public Order $order,
+        public int $paymentMethod,
         public array $cart,
+        public array $user,
         public $cookie,
     ) {
         //
@@ -42,9 +46,13 @@ class ProcessOrderJob implements ShouldQueue
         }
 
         try {
-            
+            $response = $this->processPayment($this->order, $this->paymentMethod, $this->cookie);
+
+            Log::info($response);
         } catch (\Exception $e) {
             Log::error('Error processing payment...' . $e);
         }
+
+        SendConfirmOrderJob::dispatch($this->order, $this->cookie);
     }
 }

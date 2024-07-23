@@ -16,6 +16,7 @@ return new class extends Migration
             $table->text('cart');
             $table->unsignedBigInteger('user_id');
             $table->foreignId('order_details_id')->constrained('order_details')->onUpdate('cascade')->onDelete('cascade');
+            $table->text('aditional_comments')->nullable()->default(null);
             $table->timestamps();
         });
     }

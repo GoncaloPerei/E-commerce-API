@@ -21,15 +21,28 @@ class StorePaymentRequest extends FormRequest
      */
     public function rules(): array
     {
+
         return [
-            'cart' => ['required'],
+            'order' => ['required'],
+            'type' => ['required'],
+            'cardName' => ['required'],
+            'cardNumber' => ['required'],
+            'expirationDate' => ['required'],
+            'cvcCvv' => ['required'],
+            'money' => ['required', 'numeric', 'min:50', 'max:10000'],
         ];
     }
 
     protected function prepareForValidation()
     {
         $this->merge([
-            'cart_id' => $this->cart,
+            'order_id' => $this->order,
+            'payment_type_id' => $this->type,
+            'card_name' => $this->cardName,
+            'card_number' => $this->cardNumber,
+            'card_expiration_date' => $this->expirationDate,
+            'card_code' => $this->cvcCvv,
+            'money' => rand(50, 10000),
         ]);
     }
 }

@@ -12,9 +12,10 @@ class Payment extends Model
 
     protected $fillable = [
         'order_id',
-        'user_id',
-        'type',
+        'payment_type_id',
+        'card_id',
         'payment_status_id',
+        'notes',
     ];
 
     public function status(): BelongsTo
@@ -24,6 +25,6 @@ class Payment extends Model
 
     public function type(): BelongsTo
     {
-        return $this->belongsTo(Payment::class);
+        return $this->belongsTo(PaymentType::class, 'payment_type_id', 'id');
     }
 }

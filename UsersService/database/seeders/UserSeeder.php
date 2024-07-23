@@ -26,7 +26,7 @@ class UserSeeder extends Seeder
                 'email' => 'administrator@administrator.com',
                 'password' => 'administrator',
                 'role_id' => '1',
-                'money' => 999999999,
+                'balance' => 999999999,
             ]);
 
             User::factory()
