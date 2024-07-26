@@ -38,14 +38,6 @@ class PaymentController extends Controller
     {
         DB::beginTransaction();
 
-        //Decoding authenticated user
-        try {
-            $user = $this->getUser($this->getCookie());
-        } catch (\Exception $e) {
-            Log::error('An error ocurred when getting user... ' . $e);
-            return response()->json(['message' => 'An error ocurred when getting user', 'error' => $e->getMessage()], 500);
-        }
-
         $paymentData = [
             'order_id' => $request['order']['id'],
         ];
@@ -75,14 +67,6 @@ class PaymentController extends Controller
      */
     public function show($order)
     {
-        //Decoding authenticated user
-        try {
-            $user = $this->getUser($this->getCookie());
-        } catch (\Exception $e) {
-            Log::error('An error ocurred when getting user... ' . $e);
-            return response()->json(['message' => 'An error ocurred when getting user', 'error' => $e->getMessage()], 500);
-        }
-
         $payment = Payment::where('order_id', $order)
             ->with('status', 'type')
             ->firstOrFail();
