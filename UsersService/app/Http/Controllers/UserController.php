@@ -13,12 +13,14 @@ use App\Http\Requests\User\StoreUserRequest;
 use App\Http\Requests\User\UpdateUserRequest;
 
 use App\Jobs\CreateCartJob;
-
+use App\Traits\CookieTrait;
 use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
 
 class UserController extends Controller
 {
+    use CookieTrait;
+
     /**
      * Display a listing of the resource.
      */
@@ -53,7 +55,7 @@ class UserController extends Controller
 
             $user = User::create($request->all());
 
-            CreateCartJob::dispatch($user);
+            CreateCartJob::dispatch($user, $this->getCookie());
 
             DB::commit();
             return response()->json(['message' => 'User created successfully'], 201);
